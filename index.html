@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>2025 Open Sweepstakes Leaderboard</title>
+<style>
+body { font-family: sans-serif; background: #f9f9f9; }
+h2 { text-align: center; margin-top: 30px; }
+table { border-collapse: collapse; width: 90%; max-width: 800px; margin: 20px auto; background: white; }
+th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+th { background: #f0f0f0; }
+.cut { color: red; font-weight: bold; }
+</style>
+</head>
+<body>
+<h2>Sweepstakes Leaderboard – Total To‑Par (Live)</h2>
+<table id="leaderboard">
+<thead>
+<tr>
+<th>Rank</th>
+<th>Entrant</th>
+<th>Players</th>
+<th>Total To‑Par</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+<script>
+const entrants = {
+"Cian Leahy": ["Scottie Scheffler", "Robert MacIntyre", "Cory Conners"],
+"David Keegan": ["Viktor Hovland", "Robert MacIntyre", "Tyrell Hatton"],
+"Daragh Cullen": ["Shane Lowry", "Viktor Hovland", "Robert MacIntyre"],
+"Seamus Boyle": ["Scottie Scheffler", "Shane Lowry", "Jordan Spieth"],
+"Peter Byrne": ["Matt Fitzpatrick", "Shane Lowry", "Robert MacIntyre"],
+"Kev Kirwan": ["Matt Fitzpatrick", "Ludvig Aberg", "Tyrell Hatton"],
+"Sean Kane": ["Tommy Fleetwood", "Rory McIlroy", "Adam Scott"],
+"Kyle Brennan": ["Tommy Fleetwood", "Viktor Hovland", "Sepp Straka"]
+};
+
+async function refresh() {
+try {
+const res = await fetch('https://site.api.espn.com/apis/golf/scoreboard/v2/leaderboard?season=2025&tour=PGA&event=153');
+const json = await res.json();
+
+const playerMap = {};
+json.leaderboard.entries.forEach(entry => {
+const name = entry.player.name;
+const toPar = entry.scoreToPar;
+const status = entry.status;
+const adjustedScore = (status === "CUT") ? toPar + 10 : toPar;
+playerMap[name] = {
+score: adjustedScore,
+status: status
+};
+});
+
+const results = [];
+for (const [entrant, players] of Object.entries(entrants)) {
+let total = 0;
+let playerList = [];
+
+players.forEach(player => {
+const data = playerMap[player];
+if (data) {
+total += data.score;
+const cutMark = data.status === "CUT" ? ' <span class="cut">(CUT +10)</span>' : '';
+playerList.push(`${player}${cutMark}`);
+} else {
+playerList.push(`${player} <span style="color:gray">(No Data)</span>`);
+}
+});
+
+results.push({ name: entrant, players: playerList, score: total });
+}
+
+results.sort((a, b) => a.score - b.score);
+const tbody = document.querySelector('#leaderboard tbody');
+tbody.innerHTML = '';
+results.forEach((r, i) => {
+const row = document.createElement('tr');
+row.innerHTML = `
+<td>${i + 1}</td>
+<td>${r.name}</td>
+<td>${r.players.join('<br>')}</td>
+<td>${r.score > 0 ? '+' : ''}${r.score}</td>
+`;
+tbody.appendChild(row);
+});
+} catch (e) {
+console.error("Error fetching data:", e);
+}
+}
+
+refresh();
+setInterval(refresh, 60000); // Refresh every 60 seconds
+</script>
+</body>
+</html>
